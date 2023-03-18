@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-function BaseForm({ submitFormUrl }) {
+function BaseForm({ submitFormUrl, submitButtonText, title }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
@@ -46,7 +46,7 @@ function BaseForm({ submitFormUrl }) {
 
     return (
         <>
-            <h1>Login Page</h1>
+            <h1>{title || "Form"}</h1>
             {!!(state?.message) &&
                 <div>
                     <h3>{state.message}</h3>
@@ -67,7 +67,7 @@ function BaseForm({ submitFormUrl }) {
                     <input type='password' id='password' name='password' value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
 
-                <button type='submit'>Login</button>
+                <button type='submit'>{submitButtonText || "Submit"}</button>
             </form>
         </>
     );
