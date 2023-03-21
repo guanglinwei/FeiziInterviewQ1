@@ -9,6 +9,8 @@ Create a software API that gets log in information from users:
 If the user doesn’t have an account, it directs them to a page to create an account
 - Get basic user information in that page, and create an account 
 
+Also allows login with Google.
+
 ## Instructions
 ### Server
 - Clone this repo

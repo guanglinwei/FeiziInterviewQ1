@@ -19,8 +19,12 @@ def get_db() -> sqlite3.Connection:
 @app.route("/login", methods=["POST"])
 def login():
     username = request.json["username"]
+    is_google_login = request.json.get("isGoogleLogin")
     
     db = get_db()
+    
+    # for x in db.execute("SELECT * FROM USERS").fetchall():
+    #     print(x)
     
     user = db.execute("SELECT * FROM USERS WHERE username = ?;", (username,)).fetchone()
     if user is None:
@@ -34,14 +38,41 @@ def login():
         }
     else:
         # Account does exist
-        password = request.json["password"]
         
-        # Correct password, go to next page
-        if bcrypt.check_password_hash(user[1], password):
+        # Account was made with Google
+        if user[2] == 1:
+            # Tried to log in with username and password on Google account
+            if is_google_login != 1:
+                return {
+                    "url": "/",
+                    "state": {
+                        "error": "Must log in to that user with Google."
+                    }
+                }
+            else:
+                # OAuth did not validate the login request
+                if request.json.get("sub") is None or user[3] != request.json.get("sub"):
+                    return {
+                        "url": "/",
+                        "state": {
+                            "error": "An error occurred when trying to log in with Google."
+                        }
+                    }
+                else:
+                    # Successful
+                    return {
+                        "url": "/user",
+                        "state": {
+                            "username": user[0]
+                        }
+                    }
+                    
+            
+        if (user[2] == 1 and is_google_login == 1) or bcrypt.check_password_hash(user[1], request.json["password"]):
             return {
                 "url": "/user",
                 "state": {
-                    "username": username
+                    "username": user[0]
                 }
             }
         # Incorrect password, show error
@@ -56,7 +87,9 @@ def login():
 @app.route("/register_user", methods=["POST"])
 def register_user():
     username = request.json["username"]
-    password = request.json["password"]
+    password = request.json.get("password")
+    is_google_login = request.json.get("isGoogleLogin")
+    sub = request.json.get("sub")
     
     db = get_db()
     
@@ -73,11 +106,33 @@ def register_user():
     else:
         # Add new account
         print("Creating new account with name:", username)
-        db.execute("INSERT INTO USERS (Username, Password) VALUES (?, ?)",
-                   (username, bcrypt.generate_password_hash(password)))
+        
+        # Not logging in with Google
+        if is_google_login is None or is_google_login == 0:
+            if password is None:
+                return {
+                    "url": "/register",
+                    "state": {
+                        "error": "Password cannot be empty."
+                    }
+                }
+            else:
+                db.execute("INSERT INTO USERS (Username, Password) VALUES (?, ?)",
+                        (username, bcrypt.generate_password_hash(password)))
+        else:
+            # Creating account with Google
+            if sub is None:
+                return {
+                    "url": "/",
+                    "state": {
+                        "error": "An error occurred when creating an account with Google."
+                    }
+                }
+            else:
+                db.execute("INSERT INTO USERS (Username, IsGoogleLogin, Sub) VALUES (?, ?, ?)",
+                        (username, 1, sub))
         
         db.commit()
-        user = db.execute("SELECT * FROM USERS WHERE username = ?;", (username,)).fetchone()
         
         return {
             "url": "/",
